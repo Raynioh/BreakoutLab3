@@ -8,27 +8,32 @@ c.height = window.innerHeight - 20;
 const brickColumns = 10;
 const brickRows = 5;
 
-// definicije konstantnih vrijednosti (velicine objekata i pozicija prve cigle)
+// definicije konstantnih vrijednosti (velicine objekata, brzina palice i pozicija prve cigle)
 const ballRadius = 10;
-const paddleHeight = 25;
-const paddleWidth = 170;
+const platformHeight = 25;
+const platformWidth = 170;
 const brickWidth = 70;
 const brickHeight = 15;
 const brickPadding = 10;
-// pocetna cigla ima x vrijednost koja centrira skup svih cigli
+const platformSpeed = 5;
+// pocetna cigla (gore lijevo) ima x vrijednost koja centrira skup svih cigli
 const startBrickX = c.width / 2 - brickColumns * (brickPadding + brickWidth) / 2;
 const startBrickY = 50;
 
 // definicije promjenjivih vrijednosti (brzina i smjer loptice, pozicija palice i loptice, rezultati)
-var ballSpeedY = -4;
-// generiranje random kuta kojim loptica krece
-var ballSpeedX = 4 * (Math.random() - 0.5);
-var paddleX = c.width / 2 - paddleWidth / 2;
-var paddleY = c.height - 50;
-var ballX = paddleX + paddleWidth / 2;
-var ballY = paddleY - paddleHeight - 20;
+var ballSpeedX = 3 * (Math.random() - 0.5);
+var ballSpeedY = -3;
+var platformX = c.width / 2 - platformWidth / 2;
+var platformY = c.height - 50;
+var ballX = platformX + platformWidth / 2;
+var ballY = platformY - platformHeight - 20;
 var score = 0;
 var highscore = localStorage.getItem('highscore') || 0;
+// varijable za pomak palice
+var keys = {
+    left: false,
+    right: false,
+};
 
 // stvaranje praznih objekata cigli
 // x, y: pozicija pojedinacne cigle
@@ -69,11 +74,11 @@ function drawBall() {
 }
 
 // crtanje palice
-function drawPaddle() {
+function drawPlatform() {
     ctx.fillStyle = 'red';
-    ctx.fillRect(paddleX, paddleY, paddleWidth, paddleHeight);
+    ctx.fillRect(platformX, platformY, platformWidth, platformHeight);
     ctx.strokeStyle = 'white';
-    ctx.strokeRect(paddleX, paddleY, paddleWidth, paddleHeight);
+    ctx.strokeRect(platformX, platformY, platformWidth, platformHeight);
 }
 
 // ispis rezultata
@@ -92,7 +97,7 @@ function detectCollision() {
     for(let i = 0; i < brickColumns; i++){
         for(let j = 0; j < brickRows; j++){
             var brick = bricks[i][j];
-            if(brick.status === 1) {
+            if(brick.status == 1) {
                 // ako je sljedeci uvjet ispunjen, loptica je u kontaktu sa ciglom
                 if (
                     ballX - ballRadius > brick.x &&
@@ -130,9 +135,9 @@ function detectCollision() {
     // sudar s palicom
     // loptici se obrne smjer brzine po y osi
     if (
-        ballY + ballRadius > paddleY &&
-        ballX > paddleX &&
-        ballX < paddleX + paddleWidth
+        ballY + ballRadius > platformY &&
+        ballX > platformX &&
+        ballX < platformX + platformWidth
     ) {
         ballSpeedY = -ballSpeedY;
         // racunanje nove brzine po x osi
@@ -142,15 +147,31 @@ function detectCollision() {
     }
 }
 
-// listener za lijevu i desnu strelicu za pomicanje palice
-// ako se pritisne traznena tipka, palica se mice po x osi
+// listener za pritisak lijeve i desne strelice
+// ako se trazena tipka pritisne promjeni se varijabla keys te se palica mice
 document.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowRight' && paddleX < c.width - paddleWidth) {
-        paddleX += 40;
-    } else if (e.key === 'ArrowLeft' && paddleX > 0) {
-        paddleX -= 40;
-    }
+    if (e.key == 'ArrowLeft')
+        keys.left = true;
+    if(e.key == 'ArrowRight')
+        keys.right = true;
 });
+
+// listener za prestanak pritiska lijeve i desne strelice
+// ako se trazena tipka pusti promjeni se varijabla keys te se palica prestane micati
+document.addEventListener('keyup', (e) => {
+    if (e.key == 'ArrowLeft')
+        keys.left = false;
+    if(e.key == 'ArrowRight')
+        keys.right = false;
+});
+
+// palica se krece lijevo ili desno dokle god je pritisnuta lijeva ili desna strelica
+function movePlatform() {
+    if (keys.left && platformX > 0)
+        platformX -= platformSpeed;
+    if (keys.right && platformX < c.width - platformWidth)
+        platformX += platformSpeed;
+}
 
 // glavna funkcija koja iscrtava sve ostale elemente
 function draw() {
@@ -159,12 +180,14 @@ function draw() {
 
     // crtanje svih elemenata igre
     drawBricks();
-    drawPaddle();
+    drawPlatform();
     drawBall();
     drawScore();
-    // na kraju se provjeravaju sudari
+    // provjera sudara
     detectCollision();
 
+    // pomak palice
+    movePlatform();
     // pomak loptice
     ballX += ballSpeedX;
     ballY += ballSpeedY;
@@ -181,7 +204,7 @@ function draw() {
 
     // postignut je maksimalni rezultat
     // ako je uvjet ispunjen igrac je pobjedio te se ispisuje poruka na ekran
-    if (score === brickRows * brickColumns) {
+    if (score == brickRows * brickColumns) {
         ctx.font = '40px Arial';
         ctx.fillStyle = 'white';
         ctx.textAlign = 'center';
